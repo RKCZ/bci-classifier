@@ -16,13 +16,13 @@ def test_read_nonexistent_file():
         bciclassifier.read_mat_file('nonexistent/file')
 
 
-@pytest.mark.parametrize("experiment_type, dataset, expected", [
+@pytest.mark.parametrize("experiment_style, dataset, expected", [
     ("visual", "test", r's\d+_V_test\.dat_?\d*\.mat'),
     ("audiovisual", "test", r's\d+_AV_test\.dat_?\d*\.mat'),
     ("audio", "train", r's\d+_A_train\.dat_?\d*\.mat')
 ])
-def test_get_data_filename_regex(experiment_type, dataset, expected):
-    assert bciclassifier.get_data_filename_regex(experiment_type, dataset) == expected
+def test_get_data_filename_regex(experiment_style, dataset, expected):
+    assert bciclassifier.get_data_filename_regex(experiment_style, dataset) == expected
 
 
 @pytest.fixture
@@ -49,15 +49,15 @@ def mock_data_dir(tmp_path):
     return {"path": tmp_path, "filenames": [str(x) for x in files]}
 
 
-@pytest.mark.parametrize("experiment_type, dataset, expected", [
+@pytest.mark.parametrize("experiment_style, dataset, expected", [
     ("visual", "test", ()),
     ("audio", "test", (0,)),
     ("audiovisual", "test", (2, 4, 5)),
     ("audiovisual", "train", (3,))
 ])
-def test_get_data_filenames(mock_data_dir, experiment_type, dataset, expected):
+def test_get_data_filenames(mock_data_dir, experiment_style, dataset, expected):
     exp_files = [mock_data_dir["filenames"][i] for i in expected]
     path = mock_data_dir["path"]
-    regex = bciclassifier.get_data_filename_regex(experiment_type, dataset)
+    regex = bciclassifier.get_data_filename_regex(experiment_style, dataset)
     # Using Counter for comparison because order of the files seems to not be consistent on all OS platforms
     assert Counter(bciclassifier.get_data_filenames(path, regex)) == Counter(exp_files)

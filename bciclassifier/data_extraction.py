@@ -13,15 +13,15 @@ def read_mat_file(path):
     return data
 
 
-def get_data_filename_regex(experiment_type='audiovisual', dataset='train'):
+def get_data_filename_regex(experiment_style='audiovisual', dataset='train'):
     """
     Generates a regular expression for matching data files.
-    :param experiment_type:  Type of the queried experiment. Must be one of 'audio', 'visual', 'audiovisual'.
+    :param experiment_style:  Type of the queried experiment. Must be one of 'audio', 'visual', 'audiovisual'.
     :param dataset: Type of dataset. The value should be either 'train' or 'test'.
     :return: Raw string containing regular expression, which can be used as a pattern for matching data files.
     """
     experiments_dict = {'audio': 'A', 'audiovisual': 'AV', 'visual': 'V'}
-    return fr's\d+_{experiments_dict[experiment_type]}_{dataset}\.dat_?\d*\.mat'
+    return fr's\d+_{experiments_dict[experiment_style]}_{dataset}\.dat_?\d*\.mat'
 
 
 def get_data_filenames(path, pattern):
@@ -49,14 +49,31 @@ def extract_data(path):
     :return: A directory of data extracted from files at given location.
     """
     result = {}
-    for experiment_type in ("visual", "audio", "audiovisual"):
+    for experiment_style in ("visual", "audio", "audiovisual"):
         experiment_dict = {}
         for dataset in ("test", "train"):
             subjects = []
-            pattern = get_data_filename_regex(experiment_type, dataset)
+            pattern = get_data_filename_regex(experiment_style, dataset)
             files = get_data_filenames(path, pattern)
             for f in files:
                 subjects.append(read_mat_file(f))
             experiment_dict[dataset] = subjects
-        result[experiment_type] = experiment_dict
+        result[experiment_style] = experiment_dict
     return result
+
+
+def extract_features(data, experiment_style, dataset, target):
+    """
+    Extract selected feature vectors from data structure.
+    :param data: Data structure loaded from external source.
+    :param experiment_style: Type of experiment data ('visual', 'audio', 'audiovisual').
+    :param dataset: Dataset to load ('test', 'train').
+    :param target:
+    :return:
+    """
+    features = []
+    subjects = data[experiment_style][dataset]
+    for subject in subjects:
+        for epoch in subject[target]:
+            features.append(epoch)
+    return features
