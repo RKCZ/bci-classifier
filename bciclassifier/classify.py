@@ -22,10 +22,14 @@ def classify_target(datamanager):
 
 def _classify(data, pipeline):
     # flatten samples before training
-    data = [DataManager.flatten(x) for x in data]
+    x_train = DataManager.flatten(data[0])
+    x_test = DataManager.flatten(data[1])
+    # flatten labels
+    y_train = data[2].ravel()
+    y_test = data[3].ravel()
     erpclassifier = ERPClassifier(pipeline)
-    train_result = erpclassifier.train(data[0], data[2])
-    test_score = erpclassifier.test(data[1], data[3])
+    train_result = erpclassifier.train(x_train, y_train)
+    test_score = erpclassifier.test(x_test, y_test)
     print(test_score)
 
 
