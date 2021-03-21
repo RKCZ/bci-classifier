@@ -18,9 +18,11 @@ class DataManager:
 
     def __init__(self, data_path: str):
         self._logger = logging.getLogger(__name__)
-        if data_path is not None:
+        if data_path is not None and os.path.isdir(data_path):
             self._path = data_path
             self.data = self.extract_data()
+        else:
+            raise NotADirectoryError
 
     def get_target_split(self):
         experiment_styles = ('visual', 'audio', 'audiovisual')
