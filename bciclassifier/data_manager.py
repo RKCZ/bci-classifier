@@ -17,6 +17,12 @@ TAG_TEST = 'test'
 class DataManager:
 
     def __init__(self, data_path: str):
+        """
+        Initializes Data manager. If the given data_path is valid, data are extracted automatically.
+
+        :param data_path: Path to data folder.
+        :raises NotADirectoryError
+        """
         self._logger = logging.getLogger(__name__)
         if data_path is not None and os.path.isdir(data_path):
             self._path = data_path
@@ -25,6 +31,12 @@ class DataManager:
             raise NotADirectoryError
 
     def get_target_split(self):
+        """
+        Splits epochs data into datasets for classification of target vs. non-target epochs..
+
+        :return: A tuple with feature array for training, feature array for testing, array of labels for training and
+         array of labels for testing.
+        """
         experiment_styles = ('visual', 'audio', 'audiovisual')
         classes = (TAG_TARGET, TAG_NON_TARGET)
 
@@ -52,6 +64,12 @@ class DataManager:
         return x_train, x_test, y_train, y_test
 
     def get_experiment_style_split(self):
+        """
+        Splits data into datasets for classification into three classes: audio, visual, audiovisual.
+
+        :return: A tuple with feature array for training, feature array for testing, array of labels for training and
+         array of labels for testing.
+        """
         classes = ('visual', 'audio', 'audiovisual')
         targets = TAG_TARGET
 
@@ -79,6 +97,13 @@ class DataManager:
 
     @staticmethod
     def flatten(data):
+        """
+        Reshapes array of features into array of flat feature vectors.
+
+        :param data: Array of features of arbitrary dimensionality. First dimension of the array is taken as number
+        of samples.
+        :return: Reshaped array with the same number of samples.
+        """
         samples = data.shape[0]
         return data.reshape((samples, -1))
 
@@ -91,6 +116,7 @@ class DataManager:
     def get_data_filename_regex(experiment_style='audiovisual', dataset='train'):
         """
         Generates a regular expression for matching data files.
+
         :param experiment_style:  Type of the queried experiment. Must be one of 'audio', 'visual', 'audiovisual'.
         :param dataset: Type of dataset. The value should be either 'train' or 'test'.
         :return: Raw string containing regular expression, which can be used as a pattern for matching data files.
@@ -102,6 +128,7 @@ class DataManager:
         """
         Finds paths to all data files which match a given pattern. The search is executed in a directory specified by
         path and all its subdirectories.
+
         :param pattern: A regular expression pattern to match against filenames.
         :return: A list of paths to matched files in the
         given directory and its subdirectories.
@@ -118,6 +145,7 @@ class DataManager:
         Extracts all data from files at given path and subdirectories. The data are stored into dictionary object with
         keys 'audio', 'visual' and 'audiovisual'. Each of these values are another dictionaries with data divided by
         dataset type_ ('test', 'train').
+
         :return: A directory of data extracted from files at given location.
         """
         result = {}
@@ -138,6 +166,7 @@ class DataManager:
     def extract_features(self, experiment_style, dataset, target):
         """
         Extract selected feature vectors from data structure.
+
         :param experiment_style: Type of experiment data ('visual', 'audio', 'audiovisual').
         :param dataset: Dataset to load ('test', 'train').
         :param target:

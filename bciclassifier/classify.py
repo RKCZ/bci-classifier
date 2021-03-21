@@ -11,6 +11,12 @@ import logging
 
 
 def classify_target(datamanager):
+    """
+    Trains and tests classification of target vs. non-target epochs.
+
+    :param datamanager: DataManager object which supplies data for classification.
+    :return: None
+    """
     logger = logging.getLogger(__name__)
     logger.info("Classifying target vs. non-target epochs.")
     normalizer = Normalizer()
@@ -34,6 +40,11 @@ def _classify(data, pipeline):
 
 
 def classify_audiovisual(datamanager):
+    """
+    Trains and tests classification of audio vs. visual vs. audiovisual epochs.
+    :param datamanager: DataManager object which supplies data for classification.
+    :return: None
+    """
     logger = logging.getLogger(__name__)
     logger.info("Classifying visual vs. audio vs. audiovisual epochs.")
     normalizer = Normalizer()
