@@ -1,4 +1,6 @@
 import logging
+# import KerasClassifier from scikeras
+from scikeras.wrappers import KerasClassifier
 
 
 class ERPClassifier:
@@ -21,6 +23,16 @@ class ERPClassifier:
         :return: Result of the classifier's fit method.
         """
         result = self._classifier.fit(x_train, y_train)
+        return result
+
+    def predict(self, x):
+        """
+        Predicts labels for given feature vectors.
+
+        :param x: Feature vectors.
+        :return: Predicted labels.
+        """
+        result = self._classifier.predict(x)
         return result
 
     def test(self, x_test, y_test):
