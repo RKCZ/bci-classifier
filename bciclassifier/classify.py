@@ -2,6 +2,10 @@ import logging
 
 from scikeras.wrappers import KerasClassifier
 from sklearn.metrics import precision_score, recall_score, confusion_matrix
+from tensorflow.keras.initializers import GlorotUniform
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
 
 from bciclassifier.data_manager import DataManager
 from bciclassifier.erpclassifier import ERPClassifier
@@ -20,10 +24,12 @@ def classify_target(datamanager, metrics):
     logger.info("Classifying target vs. non-target epochs.")
     clf = KerasClassifier(
         model=keras_model_target,
-        loss="sparse_categorical_crossentropy",
+        loss=SparseCategoricalCrossentropy(),
         name="model_target",
-        optimizer='adam',
-        epochs=20,
+        optimizer=Adam(),
+        init=GlorotUniform(),
+        metrics=[SparseCategoricalAccuracy()],
+        epochs=5,
         batch_size=128
     )
     data = datamanager.get_target_split()
@@ -35,9 +41,8 @@ def _classify(data, pipeline, metrics):
     # flatten samples before training
     x_train = DataManager.flatten(data[0])
     x_test = DataManager.flatten(data[1])
-    # flatten labels
-    y_train = data[2].ravel()
-    y_test = data[3].ravel()
+    y_train = data[2]
+    y_test = data[3]
     erpclassifier = ERPClassifier(pipeline)
     train_result = erpclassifier.train(x_train, y_train)
     predictions = erpclassifier.predict(x_test)
@@ -64,10 +69,12 @@ def classify_audiovisual(datamanager, metrics):
     logger.info("Classifying visual vs. audio vs. audiovisual epochs.")
     clf = KerasClassifier(
         model=keras_model_audiovisual,
-        loss="sparse_categorical_crossentropy",
+        loss=SparseCategoricalCrossentropy(),
         name="model_audiovisual",
-        optimizer='adam',
-        epochs=20,
+        optimizer=Adam(),
+        init=GlorotUniform(),
+        metrics=[SparseCategoricalAccuracy()],
+        epochs=5,
         batch_size=128
     )
     data = datamanager.get_experiment_style_split()

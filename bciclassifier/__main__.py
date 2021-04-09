@@ -1,8 +1,10 @@
 import argparse
 import logging
+import matplotlib.pyplot as plt
 
 from bciclassifier.classify import classify_target, classify_audiovisual
 from bciclassifier.data_manager import DataManager
+from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay
 
 TYPES = ('audiovisual', 'target')
 LOGLEVELS = ('NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
@@ -30,14 +32,19 @@ if metrics is None:
 
 dm = DataManager(args.path)
 
+result = {}
 if args.type == TYPES[0]:
-    result = classify_audiovisual(dm, metrics)
-    print(result)
+    result[TYPES[0]] = classify_audiovisual(dm, metrics)
 elif args.type == TYPES[1]:
-    result = classify_target(dm, metrics)
-    print(result)
+    result[TYPES[1]] = classify_target(dm, metrics)
 else:
-    result = classify_target(dm, metrics)
-    print(result)
-    result = classify_audiovisual(dm, metrics)
-    print(result)
+    result[TYPES[1]] = classify_target(dm, metrics)
+    result[TYPES[0]] = classify_audiovisual(dm, metrics)
+
+for res in result:
+    print(f"{res}: {result[res]}")
+    if "confusion_matrix" in result[res]:
+        ConfusionMatrixDisplay(result[res]["confusion_matrix"]).plot()
+    if "recall" in result[res] and "precision" in result[res]:
+        PrecisionRecallDisplay(precision=result[res]["precision"], recall=result[res]["recall"]).plot()
+    plt.show()
