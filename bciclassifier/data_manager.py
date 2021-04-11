@@ -4,6 +4,7 @@ import logging
 
 import numpy as np
 import scipy.io
+from mne import EpochsArray, create_info
 
 TAG_NON_TARGET = 'allNTARGETS'
 
@@ -30,70 +31,50 @@ class DataManager:
         else:
             raise NotADirectoryError
 
-    def get_target_split(self):
+    def get_target_split(self, test=False):
         """
-        Splits epochs data into datasets for classification of target vs. non-target epochs..
+        Returns dataset for classification of target vs. non-target epochs.
 
-        :return: A tuple with feature array for training, feature array for testing, array of labels for training and
-         array of labels for testing.
+        :param test: A boolean switch. If true a test dataset is returned.
+        :return: A tuple with array of features and array of labels.
         """
         experiment_styles = ('visual', 'audio', 'audiovisual')
         classes = (TAG_TARGET, TAG_NON_TARGET)
-
-        x_train = []
-        y_train = []
-        x_test = []
-        y_test = []
+        if test:
+            dataset = TAG_TEST
+        else:
+            dataset = TAG_TRAIN
+        features = np.empty(shape=(0, 16, 614))
+        labels = np.empty(shape=(0, 1))
         for index, class_ in enumerate(classes):
             for xs in experiment_styles:
-                # process train data
-                feats = self.extract_features(xs, TAG_TRAIN, class_)
-                labels = np.tile(index, (len(feats), 1))
-                x_train.extend(feats)
-                y_train.extend(labels)
-                # process test data
-                feats = self.extract_features(xs, TAG_TEST, class_)
-                labels = np.tile(index, (len(feats), 1))
-                x_test.extend(feats)
-                y_test.extend(labels)
-        x_train = np.array(x_train)
-        y_train = np.array(y_train)
-        x_test = np.array(x_test)
-        y_test = np.array(y_test)
+                feats = self.extract_features(xs, dataset, class_)
+                lbs = np.tile(index, (len(feats), 1))
+                features = np.concatenate((features, feats), axis=0)
+                labels = np.concatenate((labels, lbs), axis=0)
+        return features, labels
 
-        return x_train, x_test, y_train, y_test
-
-    def get_experiment_style_split(self):
+    def get_experiment_split(self, test=False):
         """
-        Splits data into datasets for classification into three classes: audio, visual, audiovisual.
+        Returns a dataset for classification into audio, visual and audiovisual classes.
 
-        :return: A tuple with feature array for training, feature array for testing, array of labels for training and
-         array of labels for testing.
+        :param test: A boolean switch. If true a test dataset is returned.
+        :return: A tuple with feature vectors and labels for experiment style classification.
         """
         classes = ('visual', 'audio', 'audiovisual')
         targets = TAG_TARGET
-
-        x_train = []
-        y_train = []
-        x_test = []
-        y_test = []
+        if test:
+            dataset = TAG_TEST
+        else:
+            dataset = TAG_TRAIN
+        features = np.empty(shape=(0, 16, 614))
+        labels = np.empty(shape=(0, 1))
         for index, class_ in enumerate(classes):
-            # process train data
-            feats = self.extract_features(class_, TAG_TRAIN, targets)
-            labels = np.tile(index, (len(feats), 1))
-            x_train.extend(feats)
-            y_train.extend(labels)
-            # process test data
-            feats = self.extract_features(class_, TAG_TEST, targets)
-            labels = np.tile(index, (len(feats), 1))
-            x_test.extend(feats)
-            y_test.extend(labels)
-        x_train = np.array(x_train)
-        y_train = np.array(y_train)
-        x_test = np.array(x_test)
-        y_test = np.array(y_test)
-
-        return x_train, x_test, y_train, y_test
+            feats = self.extract_features(class_, dataset, targets)
+            lbs = np.tile(index, (len(feats), 1))
+            features = np.concatenate((features, feats), axis=0)
+            labels = np.concatenate((labels, lbs), axis=0)
+        return features, labels
 
     @staticmethod
     def flatten(data):
@@ -158,7 +139,12 @@ class DataManager:
                 pattern = DataManager.get_data_filename_regex(experiment_style, dataset)
                 files = self.get_data_filenames(pattern)
                 for f in files:
-                    subjects.append(DataManager._read_mat_file(f))
+                    subject = DataManager._read_mat_file(f)
+                    info = create_info(ch_names=[x[0] for x in subject['electrodes'].ravel()], ch_types='eeg',
+                                       sfreq=512)
+                    target_epochs = EpochsArray(np.transpose(subject['allTARGETS'], (0, 2, 1)), info)
+                    ntarget_epochs = EpochsArray(np.transpose(subject['allNTARGETS'], (0, 2, 1)), info)
+                    subjects.append({'allTARGETS': target_epochs, 'allNTARGETS': ntarget_epochs})
                 experiment_dict[dataset] = subjects
             result[experiment_style] = experiment_dict
         return result
@@ -172,9 +158,8 @@ class DataManager:
         :param target:
         :return:
         """
-        features = []
+        features = np.empty(shape=(0, 16, 614))
         subjects = self.data[experiment_style][dataset]
         for subject in subjects:
-            for epoch in subject[target]:
-                features.append(epoch)
-        return np.array(features)
+            features = np.concatenate((features, subject[target].get_data()))
+        return features
