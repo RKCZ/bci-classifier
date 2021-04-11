@@ -44,7 +44,7 @@ else:
 for res in result:
     print(f"{res}: {result[res]}")
     if "confusion_matrix" in result[res]:
-        ConfusionMatrixDisplay(result[res]["confusion_matrix"]).plot()
+        ConfusionMatrixDisplay(result[res]["confusion_matrix"], display_labels=None).plot()
     if "recall" in result[res] and "precision" in result[res]:
         PrecisionRecallDisplay(precision=result[res]["precision"], recall=result[res]["recall"]).plot()
     plt.show()
