@@ -12,12 +12,12 @@ from bciclassifier.erpclassifier import ERPClassifier
 from bciclassifier.keras_model import keras_model_target, keras_model_audiovisual
 
 
-def classify_target(datamanager, metrics):
+def classify_target(data_manager, metrics):
     """
     Trains and tests classification of target vs. non-target epochs.
 
     :param metrics:
-    :param datamanager: DataManager object which supplies data for classification.
+    :param data_manager: DataManager object which supplies data for classification.
     :return: None
     """
     logger = logging.getLogger(__name__)
@@ -32,37 +32,36 @@ def classify_target(datamanager, metrics):
         epochs=5,
         batch_size=128
     )
-    data = datamanager.get_target_split()
-    result = _classify(data, clf, metrics)
+    # get samples for training
+    x_train, y_train = data_manager.get_target_split()
+    # flatten feature vectors
+    x_train = DataManager.flatten(x_train)
+    erp_classifier = ERPClassifier(clf)
+    erp_classifier.train(x_train, y_train)
+    del x_train, y_train
+    x_test, y_test = data_manager.get_target_split(test=True)
+    x_test = DataManager.flatten(x_test)
+    predictions = erp_classifier.predict(x_test)
+    result = evaluate(metrics, y_test, predictions)
     return result
 
 
-def _classify(data, pipeline, metrics):
-    # flatten samples before training
-    x_train = DataManager.flatten(data[0])
-    x_test = DataManager.flatten(data[1])
-    y_train = data[2]
-    y_test = data[3]
-    erpclassifier = ERPClassifier(pipeline)
-    train_result = erpclassifier.train(x_train, y_train)
-    predictions = erpclassifier.predict(x_test)
-
+def evaluate(metrics, y_true, y_pred):
     result = {}
     if 'confusion_matrix' in metrics:
-        result['confusion_matrix'] = confusion_matrix(y_test, predictions)
+        result['confusion_matrix'] = confusion_matrix(y_true, y_pred)
     if 'recall' in metrics:
-        result['recall'] = recall_score(y_test, predictions, average=None)
+        result['recall'] = recall_score(y_true, y_pred, average=None)
     if 'precision' in metrics:
-        result['precision'] = precision_score(y_test, predictions, average=None)
-
+        result['precision'] = precision_score(y_true, y_pred, average=None)
     return result
 
 
-def classify_audiovisual(datamanager, metrics):
+def classify_audiovisual(data_manager, metrics):
     """
     Trains and tests classification of audio vs. visual vs. audiovisual epochs.
     :param metrics:
-    :param datamanager: DataManager object which supplies data for classification.
+    :param data_manager: DataManager object which supplies data for classification.
     :return: None
     """
     logger = logging.getLogger(__name__)
@@ -77,6 +76,15 @@ def classify_audiovisual(datamanager, metrics):
         epochs=5,
         batch_size=128
     )
-    data = datamanager.get_experiment_style_split()
-    result = _classify(data, clf, metrics)
+    # get samples for training
+    x_train, y_train = data_manager.get_experiment_split()
+    # flatten feature vectors
+    x_train = DataManager.flatten(x_train)
+    erp_classifier = ERPClassifier(clf)
+    erp_classifier.train(x_train, y_train)
+    del x_train, y_train
+    x_test, y_test = data_manager.get_experiment_split(test=True)
+    x_test = DataManager.flatten(x_test)
+    predictions = erp_classifier.predict(x_test)
+    result = evaluate(metrics, y_test, predictions)
     return result

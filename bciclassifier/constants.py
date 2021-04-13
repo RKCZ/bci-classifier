@@ -1,0 +1,11 @@
+CLASSIFICATION_TYPES = ('target', 'audiovisual')
+LOG_LEVELS = ('NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+METRICS = ('confusion_matrix', 'recall', 'precision')
+TAG_VISUAL = 'visual'
+TAG_AUDIO = 'audio'
+TAG_AUDIOVISUAL = 'audiovisual'
+TAG_NON_TARGET = 'allNTARGETS'
+TAG_TARGET = 'allTARGETS'
+TAG_TRAIN = 'train'
+TAG_TEST = 'test'
+EXPERIMENT_SESSIONS = (TAG_VISUAL, TAG_AUDIO, TAG_AUDIOVISUAL)
