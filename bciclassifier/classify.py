@@ -12,12 +12,12 @@ from bciclassifier.erpclassifier import ERPClassifier
 from bciclassifier.keras_model import keras_model_target, keras_model_audiovisual
 
 
-def classify_target(datamanager, metrics):
+def classify_target(data_manager, metrics):
     """
     Trains and tests classification of target vs. non-target epochs.
 
     :param metrics:
-    :param datamanager: DataManager object which supplies data for classification.
+    :param data_manager: DataManager object which supplies data for classification.
     :return: None
     """
     logger = logging.getLogger(__name__)
@@ -33,15 +33,15 @@ def classify_target(datamanager, metrics):
         batch_size=128
     )
     # get samples for training
-    x_train, y_train = datamanager.get_target_split()
+    x_train, y_train = data_manager.get_target_split()
     # flatten feature vectors
     x_train = DataManager.flatten(x_train)
-    erpclassifier = ERPClassifier(clf)
-    erpclassifier.train(x_train, y_train)
+    erp_classifier = ERPClassifier(clf)
+    erp_classifier.train(x_train, y_train)
     del x_train, y_train
-    x_test, y_test = datamanager.get_target_split(test=True)
+    x_test, y_test = data_manager.get_target_split(test=True)
     x_test = DataManager.flatten(x_test)
-    predictions = erpclassifier.predict(x_test)
+    predictions = erp_classifier.predict(x_test)
     result = evaluate(metrics, y_test, predictions)
     return result
 
@@ -57,11 +57,11 @@ def evaluate(metrics, y_true, y_pred):
     return result
 
 
-def classify_audiovisual(datamanager, metrics):
+def classify_audiovisual(data_manager, metrics):
     """
     Trains and tests classification of audio vs. visual vs. audiovisual epochs.
     :param metrics:
-    :param datamanager: DataManager object which supplies data for classification.
+    :param data_manager: DataManager object which supplies data for classification.
     :return: None
     """
     logger = logging.getLogger(__name__)
@@ -77,14 +77,14 @@ def classify_audiovisual(datamanager, metrics):
         batch_size=128
     )
     # get samples for training
-    x_train, y_train = datamanager.get_experiment_split()
+    x_train, y_train = data_manager.get_experiment_split()
     # flatten feature vectors
     x_train = DataManager.flatten(x_train)
-    erpclassifier = ERPClassifier(clf)
-    erpclassifier.train(x_train, y_train)
+    erp_classifier = ERPClassifier(clf)
+    erp_classifier.train(x_train, y_train)
     del x_train, y_train
-    x_test, y_test = datamanager.get_experiment_split(test=True)
+    x_test, y_test = data_manager.get_experiment_split(test=True)
     x_test = DataManager.flatten(x_test)
-    predictions = erpclassifier.predict(x_test)
+    predictions = erp_classifier.predict(x_test)
     result = evaluate(metrics, y_test, predictions)
     return result

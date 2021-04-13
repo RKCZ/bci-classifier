@@ -2,17 +2,11 @@ import os
 import re
 import logging
 
+import mne
 import numpy as np
 import scipy.io
 from mne import EpochsArray, create_info
-
-TAG_NON_TARGET = 'allNTARGETS'
-
-TAG_TARGET = 'allTARGETS'
-
-TAG_TRAIN = 'train'
-
-TAG_TEST = 'test'
+import bciclassifier.constants as consts
 
 
 class DataManager:
@@ -38,20 +32,20 @@ class DataManager:
         :param test: A boolean switch. If true a test dataset is returned.
         :return: A tuple with array of features and array of labels.
         """
-        experiment_styles = ('visual', 'audio', 'audiovisual')
-        classes = (TAG_TARGET, TAG_NON_TARGET)
+        classes = (consts.TAG_TARGET, consts.TAG_NON_TARGET)
         if test:
-            dataset = TAG_TEST
+            dataset = consts.TAG_TEST
         else:
-            dataset = TAG_TRAIN
-        features = np.empty(shape=(0, 16, 614))
-        labels = np.empty(shape=(0, 1))
+            dataset = consts.TAG_TRAIN
+
+        features_list = []
+        labels_list = []
         for index, class_ in enumerate(classes):
-            for xs in experiment_styles:
-                feats = self.extract_features(xs, dataset, class_)
-                lbs = np.tile(index, (len(feats), 1))
-                features = np.concatenate((features, feats), axis=0)
-                labels = np.concatenate((labels, lbs), axis=0)
+            feats = self.data[class_][dataset].get_data()
+            features_list.append(feats)
+            labels_list.append(np.full_like(feats[:, 0, 0], index))
+        features = np.concatenate(features_list)
+        labels = np.concatenate(labels_list)
         return features, labels
 
     def get_experiment_split(self, test=False):
@@ -61,19 +55,19 @@ class DataManager:
         :param test: A boolean switch. If true a test dataset is returned.
         :return: A tuple with feature vectors and labels for experiment style classification.
         """
-        classes = ('visual', 'audio', 'audiovisual')
-        targets = TAG_TARGET
         if test:
-            dataset = TAG_TEST
+            dataset = consts.TAG_TEST
         else:
-            dataset = TAG_TRAIN
-        features = np.empty(shape=(0, 16, 614))
-        labels = np.empty(shape=(0, 1))
-        for index, class_ in enumerate(classes):
-            feats = self.extract_features(class_, dataset, targets)
-            lbs = np.tile(index, (len(feats), 1))
-            features = np.concatenate((features, feats), axis=0)
-            labels = np.concatenate((labels, lbs), axis=0)
+            dataset = consts.TAG_TRAIN
+
+        features_list = []
+        labels_list = []
+        for index, class_ in enumerate(consts.EXPERIMENT_SESSIONS):
+            feats = self.data[class_][dataset][consts.TAG_TARGET].get_data()
+            features_list.append(feats)
+            labels_list.append(np.full_like(feats[:, 0, 0], index))
+        features = np.concatenate(features_list)
+        labels = np.concatenate(labels_list)
         return features, labels
 
     @staticmethod
@@ -123,43 +117,64 @@ class DataManager:
 
     def extract_data(self):
         """
-        Extracts all data from files at given path and subdirectories. The data are stored into dictionary object with
-        keys 'audio', 'visual' and 'audiovisual'. Each of these values are another dictionaries with data divided by
-        dataset type_ ('test', 'train').
+        Extracts all data from files at given path and subdirectories. The data are stored into `mne.EpochsArray`
+        object.
 
-        :return: A directory of data extracted from files at given location.
+        :return: Extracted epochs.
         """
-        result = {}
-        for experiment_style in ("visual", "audio", "audiovisual"):
+        event_id_iterator = 1
+        epochs_list = []
+        for experiment_style in consts.EXPERIMENT_SESSIONS:
             self._logger.debug(f"Extracting data for {experiment_style}.")
-            experiment_dict = {}
-            for dataset in (TAG_TEST, TAG_TRAIN):
+            for dataset in (consts.TAG_TEST, consts.TAG_TRAIN):
                 self._logger.debug(f"Extracting {dataset} data.")
-                subjects = []
                 pattern = DataManager.get_data_filename_regex(experiment_style, dataset)
                 files = self.get_data_filenames(pattern)
-                for f in files:
-                    subject = DataManager._read_mat_file(f)
-                    info = create_info(ch_names=[x[0] for x in subject['electrodes'].ravel()], ch_types='eeg',
-                                       sfreq=512)
-                    target_epochs = EpochsArray(np.transpose(subject['allTARGETS'], (0, 2, 1)), info)
-                    ntarget_epochs = EpochsArray(np.transpose(subject['allNTARGETS'], (0, 2, 1)), info)
-                    subjects.append({'allTARGETS': target_epochs, 'allNTARGETS': ntarget_epochs})
-                experiment_dict[dataset] = subjects
-            result[experiment_style] = experiment_dict
+                for index, file in enumerate(files):
+                    subject = DataManager._read_mat_file(file)
+                    # prepare info object and set sensor locations
+                    sampling_freq = 512
+                    info = create_info(
+                        ch_names=[x[0] for x in subject['electrodes'].ravel()],
+                        ch_types=['eeg' for _ in subject['electrodes'].ravel()],
+                        sfreq=sampling_freq
+                    )
+                    info.set_montage('standard_1020')
+
+                    # create epochs
+                    target_epochs = self._create_epochs(
+                        {f'{experiment_style}/{dataset}/{index}/{consts.TAG_TARGET}': event_id_iterator},
+                        info, np.transpose(subject[consts.TAG_TARGET], (0, 2, 1)),
+                        event_id_iterator
+                    )
+                    event_id_iterator = event_id_iterator + 1
+                    n_target_epochs = self._create_epochs(
+                        {f'{experiment_style}/{dataset}/{index}/{consts.TAG_NON_TARGET}': event_id_iterator},
+                        info, np.transpose(subject[consts.TAG_NON_TARGET], (0, 2, 1)),
+                        event_id_iterator
+                    )
+                    event_id_iterator = event_id_iterator + 1
+                    epochs_list.append(target_epochs)
+                    epochs_list.append(n_target_epochs)
+        result = mne.concatenate_epochs(epochs_list)
         return result
 
-    def extract_features(self, experiment_style, dataset, target):
-        """
-        Extract selected feature vectors from data structure.
-
-        :param experiment_style: Type of experiment data ('visual', 'audio', 'audiovisual').
-        :param dataset: Dataset to load ('test', 'train').
-        :param target:
-        :return:
-        """
-        features = np.empty(shape=(0, 16, 614))
-        subjects = self.data[experiment_style][dataset]
-        for subject in subjects:
-            features = np.concatenate((features, subject[target].get_data()))
-        return features
+    @staticmethod
+    def _create_epochs(events_dict, info, data, event_number):
+        time_offset = -0.2
+        n_epochs = data.shape[0]
+        n_samples = data.shape[2]
+        events = np.column_stack((
+            np.arange(0, n_epochs * n_samples, n_samples),
+            np.zeros(n_epochs, dtype=int),
+            np.full((n_epochs, ), event_number)
+        ))
+        epochs = EpochsArray(
+            data,
+            info,
+            tmin=time_offset,
+            baseline=(None, 0),
+            events=events,
+            event_id=events_dict
+        )
+        return epochs
