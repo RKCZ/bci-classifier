@@ -133,25 +133,27 @@ class DataManager:
                 for index, file in enumerate(files):
                     subject = DataManager._read_mat_file(file)
                     # prepare info object and set sensor locations
-                    sampling_freq = 512
-                    info = create_info(
-                        ch_names=[x[0] for x in subject['electrodes'].ravel()],
-                        ch_types=['eeg' for _ in subject['electrodes'].ravel()],
-                        sfreq=sampling_freq
-                    )
+                    n_samples = subject['tSCALE'].shape[-1]
+                    t_min, t_max = subject['tSCALE'][0][[0, -1]]
+                    duration = t_max - t_min
+                    sampling_freq = (n_samples - 1) / duration
+                    ch_names = [x[0] for x in subject['electrodes'].flat]
+                    ch_types = ['eeg'] * len(ch_names)
+                    info = create_info(ch_names=ch_names, ch_types=ch_types, sfreq=sampling_freq)
                     info.set_montage('standard_1020')
 
                     # create epochs
                     target_epochs = self._create_epochs(
-                        {f'{experiment_style}/{dataset}/{index}/{consts.TAG_TARGET}': event_id_iterator},
-                        info, np.transpose(subject[consts.TAG_TARGET], (0, 2, 1)),
-                        event_id_iterator
+                        events_dict={f'{experiment_style}/{dataset}/{index}/{consts.TAG_TARGET}': event_id_iterator},
+                        info=info, data=np.transpose(subject[consts.TAG_TARGET], (0, 2, 1)),
+                        event_number=event_id_iterator, t_min=t_min
                     )
                     event_id_iterator = event_id_iterator + 1
                     n_target_epochs = self._create_epochs(
-                        {f'{experiment_style}/{dataset}/{index}/{consts.TAG_NON_TARGET}': event_id_iterator},
-                        info, np.transpose(subject[consts.TAG_NON_TARGET], (0, 2, 1)),
-                        event_id_iterator
+                        events_dict={
+                            f'{experiment_style}/{dataset}/{index}/{consts.TAG_NON_TARGET}': event_id_iterator},
+                        info=info, data=np.transpose(subject[consts.TAG_NON_TARGET], (0, 2, 1)),
+                        event_number=event_id_iterator, t_min=t_min
                     )
                     event_id_iterator = event_id_iterator + 1
                     epochs_list.append(target_epochs)
@@ -160,21 +162,20 @@ class DataManager:
         return result
 
     @staticmethod
-    def _create_epochs(events_dict, info, data, event_number):
-        time_offset = -0.2
+    def _create_epochs(events_dict=None, info: mne.Info = None, data=None, event_number=0, t_min=0):
         n_epochs = data.shape[0]
         n_samples = data.shape[2]
         events = np.column_stack((
             np.arange(0, n_epochs * n_samples, n_samples),
             np.zeros(n_epochs, dtype=int),
-            np.full((n_epochs, ), event_number)
+            np.full((n_epochs,), event_number)
         ))
         epochs = EpochsArray(
             data,
             info,
-            tmin=time_offset,
-            baseline=(None, 0),
+            baseline=(0, -t_min),
             events=events,
             event_id=events_dict
         )
+        epochs = epochs.shift_time(t_min, relative=False)
         return epochs
