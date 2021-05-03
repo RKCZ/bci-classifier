@@ -175,7 +175,6 @@ class DataManager:
         epochs = EpochsArray(
             data,
             info,
-            baseline=(0, -t_min),
             events=events,
             event_id=events_dict
         )
