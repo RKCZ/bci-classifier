@@ -163,6 +163,8 @@ class DataManager:
 
     @staticmethod
     def _create_epochs(events_dict=None, info: mne.Info = None, data=None, event_number=0, t_min=0):
+        # Convert values to volts
+        data = data * 1.0e-6
         n_epochs = data.shape[0]
         n_samples = data.shape[2]
         events = np.column_stack((
@@ -173,7 +175,6 @@ class DataManager:
         epochs = EpochsArray(
             data,
             info,
-            baseline=(0, -t_min),
             events=events,
             event_id=events_dict
         )

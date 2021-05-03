@@ -68,9 +68,9 @@ def main():
     else:
         result = {}
         if consts.CLASSIFICATION_TYPES[0] in args.type:
-            result[consts.CLASSIFICATION_TYPES[0]] = classify_audiovisual(dm, metrics)
-        if consts.CLASSIFICATION_TYPES[1] in args.type:
             result[consts.CLASSIFICATION_TYPES[1]] = classify_target(dm, metrics)
+        if consts.CLASSIFICATION_TYPES[1] in args.type:
+            result[consts.CLASSIFICATION_TYPES[0]] = classify_audiovisual(dm, metrics)
 
         for res in result:
             print(f"{res}: {result[res]}")
