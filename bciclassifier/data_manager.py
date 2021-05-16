@@ -133,7 +133,7 @@ class DataManager:
                 for index, file in enumerate(files):
                     subject = DataManager._read_mat_file(file)
                     match = re.search(
-                        r's(\d+)_(?:AV|A|V)_(?:test|train).dat(?:_1|_2)?.mat$',
+                        r's(\d+)_(?:AV|A|V)_(?:test|train).dat(?:_1|_2|_3)?.mat$',
                         file
                     )
                     subject_no = match.group(1)
