@@ -3,11 +3,17 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import mne
+from scikeras.wrappers import KerasClassifier
+from tensorflow.keras.initializers import GlorotUniform
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
+from tensorflow.keras.optimizers import Adam
 
 from bciclassifier.classify import classify_target, classify_audiovisual
 from bciclassifier.data_manager import DataManager
 from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay
 import bciclassifier.constants as consts
+from bciclassifier.keras_model import keras_model_target, keras_model_audiovisual
 
 
 def plot_averaged_targets_non_targets(target_epochs=None, non_target_epochs=None):
@@ -68,9 +74,29 @@ def main():
     else:
         result = {}
         if consts.CLASSIFICATION_TYPES[0] in args.type:
-            result[consts.CLASSIFICATION_TYPES[1]] = classify_target(dm, metrics)
+            clf = KerasClassifier(
+                model=keras_model_target,
+                loss=SparseCategoricalCrossentropy(),
+                name="model_target",
+                optimizer=Adam(),
+                init=GlorotUniform(),
+                metrics=[SparseCategoricalAccuracy()],
+                epochs=5,
+                batch_size=128
+            )
+            result[consts.CLASSIFICATION_TYPES[0]] = classify_target(dm, metrics, clf)
         if consts.CLASSIFICATION_TYPES[1] in args.type:
-            result[consts.CLASSIFICATION_TYPES[0]] = classify_audiovisual(dm, metrics)
+            clf = KerasClassifier(
+                model=keras_model_audiovisual,
+                loss=SparseCategoricalCrossentropy(),
+                name="model_audiovisual",
+                optimizer=Adam(),
+                init=GlorotUniform(),
+                metrics=[SparseCategoricalAccuracy()],
+                epochs=5,
+                batch_size=128
+            )
+            result[consts.CLASSIFICATION_TYPES[1]] = classify_audiovisual(dm, metrics, clf)
 
         for res in result:
             print(f"{res}: {result[res]}")
