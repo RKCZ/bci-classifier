@@ -2,13 +2,14 @@ import logging
 
 from scikeras.wrappers import KerasClassifier
 from sklearn.metrics import precision_score, recall_score, confusion_matrix
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.initializers import GlorotUniform
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.metrics import SparseCategoricalAccuracy
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
+from tensorflow.keras.optimizers import Adam
 
 from bciclassifier.data_manager import DataManager
-from bciclassifier.erpclassifier import ERPClassifier
 from bciclassifier.keras_model import keras_model_target, keras_model_audiovisual
 
 
@@ -36,12 +37,12 @@ def classify_target(data_manager, metrics):
     x_train, y_train = data_manager.get_target_split()
     # flatten feature vectors
     x_train = DataManager.flatten(x_train)
-    erp_classifier = ERPClassifier(clf)
-    erp_classifier.train(x_train, y_train)
+    pipe = make_pipeline(StandardScaler(), clf)
+    pipe.fit(x_train, y_train)
     del x_train, y_train
     x_test, y_test = data_manager.get_target_split(test=True)
     x_test = DataManager.flatten(x_test)
-    predictions = erp_classifier.predict(x_test)
+    predictions = pipe.predict(x_test)
     result = evaluate(metrics, y_test, predictions)
     return result
 
@@ -80,11 +81,11 @@ def classify_audiovisual(data_manager, metrics):
     x_train, y_train = data_manager.get_experiment_split()
     # flatten feature vectors
     x_train = DataManager.flatten(x_train)
-    erp_classifier = ERPClassifier(clf)
-    erp_classifier.train(x_train, y_train)
+    pipe = make_pipeline(StandardScaler(), clf)
+    pipe.fit(x_train, y_train)
     del x_train, y_train
     x_test, y_test = data_manager.get_experiment_split(test=True)
     x_test = DataManager.flatten(x_test)
-    predictions = erp_classifier.predict(x_test)
+    predictions = pipe.predict(x_test)
     result = evaluate(metrics, y_test, predictions)
     return result
