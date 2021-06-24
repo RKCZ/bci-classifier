@@ -1,11 +1,12 @@
+import logging
 import os
 import re
-import logging
 
 import mne
 import numpy as np
 import scipy.io
 from mne import EpochsArray, create_info
+
 import bciclassifier.constants as consts
 
 
@@ -132,6 +133,12 @@ class DataManager:
                 files = self.get_data_filenames(pattern)
                 for index, file in enumerate(files):
                     subject = DataManager._read_mat_file(file)
+                    # find the number id of the subject
+                    match = re.search(
+                        r's(\d+)_(?:AV|A|V)_(?:test|train).dat(?:_1|_2|_3)?.mat$',
+                        file
+                    )
+                    subject_no = match.group(1)
                     # prepare info object and set sensor locations
                     n_samples = subject['tSCALE'].shape[-1]
                     t_min, t_max = subject['tSCALE'][0][[0, -1]]
@@ -144,14 +151,16 @@ class DataManager:
 
                     # create epochs
                     target_epochs = self._create_epochs(
-                        events_dict={f'{experiment_style}/{dataset}/{index}/{consts.TAG_TARGET}': event_id_iterator},
+                        events_dict={f'''{experiment_style}/{dataset}/subject_{subject_no}/
+                        {consts.TAG_TARGET}/{index}''': event_id_iterator},
                         info=info, data=np.transpose(subject[consts.TAG_TARGET], (0, 2, 1)),
                         event_number=event_id_iterator, t_min=t_min
                     )
                     event_id_iterator = event_id_iterator + 1
                     n_target_epochs = self._create_epochs(
                         events_dict={
-                            f'{experiment_style}/{dataset}/{index}/{consts.TAG_NON_TARGET}': event_id_iterator},
+                            f'{experiment_style}/{dataset}/subject_{subject_no}/{consts.TAG_NON_TARGET}/{index}':
+                                event_id_iterator},
                         info=info, data=np.transpose(subject[consts.TAG_NON_TARGET], (0, 2, 1)),
                         event_number=event_id_iterator, t_min=t_min
                     )
