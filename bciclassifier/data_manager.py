@@ -151,8 +151,9 @@ class DataManager:
 
                     # create epochs
                     target_epochs = self._create_epochs(
-                        events_dict={f'''{experiment_style}/{dataset}/subject_{subject_no}/
-                        {consts.TAG_TARGET}/{index}''': event_id_iterator},
+                        events_dict={
+                            f'{experiment_style}/{dataset}/subject_{subject_no}/{consts.TAG_TARGET}/{index}':
+                                event_id_iterator},
                         info=info, data=np.transpose(subject[consts.TAG_TARGET], (0, 2, 1)),
                         event_number=event_id_iterator, t_min=t_min
                     )
